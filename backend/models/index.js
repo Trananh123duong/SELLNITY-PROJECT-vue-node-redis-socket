@@ -1,6 +1,6 @@
-const sequelize = require('../config/db')
-const initModels = require('./init-models')
+const { sequelize } = require('../config/db');
+const initModels = require('./init-models');
 
-const models = initModels(sequelize)
+const models = initModels(sequelize);
 
-module.exports = models
+module.exports = models;
