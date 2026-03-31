@@ -1,13 +1,26 @@
+require('dotenv').config();
+
 const express = require('express');
+const morgan = require('morgan');
 const cors = require('cors');
+const path = require('path');
 
-const app = express();
+const errorHandler = require('./middleware/errorHandler');
+const { checkConnection } = require('./config/db'); 
 
+const app = express()
+const port = process.env.PORT;
+
+app.use(morgan('dev'));
 app.use(cors());
 app.use(express.json());
 
-app.get('/api/health', (req, res) => {
-  res.json({ message: 'Backend is running' });
-});
+//routes
 
-module.exports = app;
+app.use(errorHandler);
+
+checkConnection();
+
+app.listen(port, () => {
+  console.log(`Server đang chạy tại http://localhost:${port}`)
+})
