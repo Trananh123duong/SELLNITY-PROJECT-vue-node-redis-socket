@@ -27,13 +27,28 @@ const handleUpdate = async (payload) => {
 </script>
 
 <template>
-  <div>
-    <h2>Edit User</h2>
+  <div class="user-form-page">
+    <el-card shadow="hover" class="form-card">
+      <template #header>
+        <h2>Edit User</h2>
+      </template>
 
-    <UserForm
-      :initial-values="currentUser"
-      submit-text="Update"
-      @submit="handleUpdate"
-    />
+      <UserForm
+        :initial-values="currentUser"
+        submit-text="Update"
+        @submit="handleUpdate"
+      />
+    </el-card>
   </div>
 </template>
+
+<style scoped lang="scss">
+.user-form-page {
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.form-card {
+  border-radius: 16px;
+}
+</style>

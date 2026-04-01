@@ -10,17 +10,27 @@
   </div>
 </template>
 
-<style scoped>
+<style scoped lang="scss">
 .main-layout {
-  padding: 20px;
+  min-height: 100vh;
+  background: #f5f7fa;
+  padding: 24px;
 }
 
 .header {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+
+  h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: #303133;
+  }
 }
 
 .content {
-  border: 1px solid #ddd;
-  padding: 20px;
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 </style>

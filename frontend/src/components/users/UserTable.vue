@@ -10,37 +10,50 @@ defineEmits(['delete'])
 </script>
 
 <template>
-  <table border="1" cellpadding="10" cellspacing="0" width="100%">
-    <thead>
-      <tr>
-        <th>ID</th>
-        <th>Username</th>
-        <th>Full Name</th>
-        <th>Email</th>
-        <th>Phone</th>
-        <th>Active</th>
-        <th>Action</th>
-      </tr>
-    </thead>
+  <el-table
+    :data="users"
+    stripe
+    border
+    style="width: 100%"
+    class="user-table"
+  >
+    <el-table-column prop="id" label="ID" width="80" />
+    <el-table-column prop="username" label="Username" />
+    <el-table-column prop="full_name" label="Full Name" />
+    <el-table-column prop="email" label="Email" />
+    <el-table-column prop="phone" label="Phone" />
 
-    <tbody>
-      <tr v-for="user in users" :key="user.id">
-        <td>{{ user.id }}</td>
-        <td>{{ user.username }}</td>
-        <td>{{ user.full_name }}</td>
-        <td>{{ user.email }}</td>
-        <td>{{ user.phone }}</td>
-        <td>{{ user.is_active ? 'Yes' : 'No' }}</td>
-        <td>
-          <router-link :to="`/users/${user.id}/edit`">
+    <el-table-column label="Active" width="100">
+      <template #default="{ row }">
+        <el-tag :type="row.is_active ? 'success' : 'danger'">
+          {{ row.is_active ? 'Yes' : 'No' }}
+        </el-tag>
+      </template>
+    </el-table-column>
+
+    <el-table-column label="Action" width="180">
+      <template #default="{ row }">
+        <router-link :to="`/users/${row.id}/edit`">
+          <el-button type="primary" size="small">
             Edit
-          </router-link>
+          </el-button>
+        </router-link>
 
-          <button @click="$emit('delete', user.id)">
-            Delete
-          </button>
-        </td>
-      </tr>
-    </tbody>
-  </table>
+        <el-button
+          type="danger"
+          size="small"
+          @click="$emit('delete', row.id)"
+        >
+          Delete
+        </el-button>
+      </template>
+    </el-table-column>
+  </el-table>
 </template>
+
+<style scoped lang="scss">
+.user-table {
+  border-radius: 12px;
+  overflow: hidden;
+}
+</style>

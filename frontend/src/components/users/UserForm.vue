@@ -44,55 +44,59 @@ watch(
 )
 
 const handleSubmit = () => {
-  emit('submit', {
-    username: form.username,
-    full_name: form.full_name,
-    email: form.email,
-    password: form.password,
-    phone: form.phone,
-    is_active: form.is_active,
-  })
+  emit('submit', { ...form })
 }
 </script>
 
 <template>
-  <form @submit.prevent="handleSubmit">
-    <div>
-      <label>Username</label><br />
-      <input v-model="form.username" type="text" />
-    </div>
+  <el-form
+    :model="form"
+    label-width="120px"
+    class="user-form"
+    @submit.prevent="handleSubmit"
+  >
+    <el-form-item label="Username">
+      <el-input v-model="form.username" />
+    </el-form-item>
 
-    <div>
-      <label>Full Name</label><br />
-      <input v-model="form.full_name" type="text" />
-    </div>
+    <el-form-item label="Full Name">
+      <el-input v-model="form.full_name" />
+    </el-form-item>
 
-    <div>
-      <label>Email</label><br />
-      <input v-model="form.email" type="email" />
-    </div>
+    <el-form-item label="Email">
+      <el-input v-model="form.email" type="email" />
+    </el-form-item>
 
-    <div>
-      <label>Password</label><br />
-      <input v-model="form.password" type="password" />
-    </div>
+    <el-form-item label="Password">
+      <el-input
+        v-model="form.password"
+        type="password"
+        show-password
+      />
+    </el-form-item>
 
-    <div>
-      <label>Phone</label><br />
-      <input v-model="form.phone" type="text" />
-    </div>
+    <el-form-item label="Phone">
+      <el-input v-model="form.phone" />
+    </el-form-item>
 
-    <div>
-      <label>
-        <input v-model="form.is_active" type="checkbox" />
-        Active
-      </label>
-    </div>
+    <el-form-item label="Status">
+      <el-switch v-model="form.is_active" />
+    </el-form-item>
 
-    <br />
+    <el-form-item>
+      <el-button type="primary" @click="handleSubmit">
+        {{ submitText }}
+      </el-button>
 
-    <button type="submit">
-      {{ submitText }}
-    </button>
-  </form>
+      <router-link to="/users">
+        <el-button>Cancel</el-button>
+      </router-link>
+    </el-form-item>
+  </el-form>
 </template>
+
+<style scoped lang="scss">
+.user-form {
+  padding-top: 8px;
+}
+</style>
