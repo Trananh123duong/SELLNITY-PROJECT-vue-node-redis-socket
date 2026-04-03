@@ -5,6 +5,7 @@ const morgan = require('morgan');
 const cors = require('cors');
 const path = require('path');
 
+const authRoutes = require('./routes/auth.route');
 const userRoutes = require('./routes/user.route');
 
 const errorHandler = require('./middleware/errorHandler');
@@ -18,6 +19,7 @@ app.use(cors());
 app.use(express.json());
 
 //routes
+app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 
 app.use(errorHandler);

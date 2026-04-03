@@ -1,17 +1,17 @@
-import apiClient from './axios'
+import api from '@/utils/axios'
 
 export const getUsersApi = () => {
-  return apiClient.get('/users')
+  return api.get('/users')
 }
 
 export const createUserApi = (payload) => {
-  return apiClient.post('/users', payload)
+  return api.post('/users', payload)
 }
 
 export const updateUserApi = (id, payload) => {
-  return apiClient.put(`/users/${id}`, payload)
+  return api.put(`/users/${id}`, payload)
 }
 
 export const deleteUserApi = (id) => {
-  return apiClient.delete(`/users/${id}`)
+  return api.delete(`/users/${id}`)
 }
