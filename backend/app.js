@@ -7,6 +7,7 @@ const path = require('path');
 
 const authRoutes = require('./routes/auth.route');
 const userRoutes = require('./routes/user.route');
+const conversationRoutes = require('./routes/conversation.route');
 
 const errorHandler = require('./middleware/errorHandler');
 const { checkConnection } = require('./config/db');
@@ -21,6 +22,7 @@ app.use(express.json());
 //routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/conversations', conversationRoutes);
 
 app.use(errorHandler);
 
