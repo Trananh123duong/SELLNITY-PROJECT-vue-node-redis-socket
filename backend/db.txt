@@ -12,3 +12,70 @@ CREATE TABLE users (
 
 ALTER TABLE users
 ADD COLUMN refresh_token TEXT;
+
+CREATE TABLE conversations (
+    id SERIAL PRIMARY KEY,
+    type VARCHAR(20) NOT NULL DEFAULT 'private', 
+    -- private | group
+
+    name VARCHAR(100), 
+    -- null với chat 1-1
+    -- có giá trị với group
+
+    avatar_url TEXT,
+
+    created_by INT REFERENCES users(id),
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE conversation_participants (
+    id SERIAL PRIMARY KEY,
+
+    conversation_id INT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+    user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+
+    joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    last_read_message_id INT,
+    last_read_at TIMESTAMP,
+
+    is_admin BOOLEAN DEFAULT FALSE,
+
+    UNIQUE(conversation_id, user_id)
+);
+
+CREATE TABLE messages (
+    id SERIAL PRIMARY KEY,
+
+    conversation_id INT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+    sender_id INT NOT NULL REFERENCES users(id),
+
+    message_type VARCHAR(20) DEFAULT 'text',
+    -- text | image | file | system
+
+    content TEXT NOT NULL,
+
+    reply_to_message_id INT REFERENCES messages(id),
+
+    is_edited BOOLEAN DEFAULT FALSE,
+    is_deleted BOOLEAN DEFAULT FALSE,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE message_status (
+    id SERIAL PRIMARY KEY,
+
+    message_id INT NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+    user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+
+    status VARCHAR(20) NOT NULL,
+    -- sent | delivered | seen
+
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    UNIQUE(message_id, user_id)
+);
