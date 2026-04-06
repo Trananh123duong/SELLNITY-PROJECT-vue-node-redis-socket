@@ -1,7 +1,9 @@
 import api from '@/utils/axios'
 
-export const getUsersApi = () => {
-  return api.get('/users')
+export const getUsersApi = (params) => {
+  return api.get('/users', {
+    params,
+  })
 }
 
 export const createUserApi = (payload) => {
@@ -14,4 +16,12 @@ export const updateUserApi = (id, payload) => {
 
 export const deleteUserApi = (id) => {
   return api.delete(`/users/${id}`)
+}
+
+export const searchUsersApi = (keyword) => {
+  return api.get('/users', {
+    params: {
+      search: keyword,
+    },
+  })
 }

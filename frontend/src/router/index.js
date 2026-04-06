@@ -3,6 +3,9 @@ import MainLayout from '@/layouts/MainLayout.vue'
 
 import LoginView from '@/views/auth/LoginView.vue'
 import RegisterView from '@/views/auth/RegisterView.vue'
+import ChatDetail from '@/views/chat/ChatDetail.vue'
+import NewConversation from '@/views/chat/NewConversation.vue'
+import ConversationListView from '@/views/conversations/ConversationListView.vue'
 import UserCreateView from '@/views/users/UserCreateView.vue'
 import UserEditView from '@/views/users/UserEditView.vue'
 import UserListView from '@/views/users/UserListView.vue'
@@ -48,6 +51,35 @@ const router = createRouter({
           path: ':id/edit',
           name: 'user-edit',
           component: UserEditView,
+        },
+      ],
+    },
+    {
+      path: '/conversations',
+      component: MainLayout,
+      meta: { requiresAuth: true },
+      children: [
+        {
+          path: '',
+          name: 'conversation-list',
+          component: ConversationListView,
+        },
+      ],
+    },
+    {
+      path: '/chat',
+      component: MainLayout,
+      meta: { requiresAuth: true },
+      children: [
+        {
+          path: 'new',
+          name: 'new-conversation',
+          component: NewConversation,
+        },
+        {
+          path: ':id',
+          name: 'chat-detail',
+          component: ChatDetail,
         },
       ],
     },

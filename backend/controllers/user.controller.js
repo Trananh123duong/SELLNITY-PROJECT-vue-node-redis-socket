@@ -1,9 +1,34 @@
 const asyncHandler = require('express-async-handler');
 const { users: User } = require('../models');
+const { Op } = require('sequelize');
 
 // GET ALL
 const getUsers = asyncHandler(async (req, res) => {
-  const users = await User.findAll();
+  const { search } = req.query;
+  const where = {};
+
+  if (search?.trim()) {
+    where[Op.or] = [
+      {
+        username: {
+          [Op.iLike]: `%${search.trim()}%`
+        }
+      },
+      {
+        full_name: {
+          [Op.iLike]: `%${search.trim()}%`
+        }
+      }
+    ];
+  }
+
+  const users = await User.findAll({
+    where,
+    attributes: {
+      exclude: ['password', 'refresh_token']
+    },
+    order: [['full_name', 'ASC']]
+  });
 
   res.status(200).json({
     success: true,

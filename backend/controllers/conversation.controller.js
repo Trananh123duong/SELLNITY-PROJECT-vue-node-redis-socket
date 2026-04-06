@@ -6,14 +6,7 @@ const {
   messages: Message
 } = require('../models');
 const { sequelize } = require('../config/db');
-const { Op, QueryTypes } = require('sequelize');
-
-/**
- * Tạo key unique cho chat private
- */
-const generatePrivateKey = (userId1, userId2) => {
-  return [userId1, userId2].sort((a, b) => a - b).join('_');
-};
+const { QueryTypes } = require('sequelize');
 
 /**
  * POST /api/conversations/private
@@ -187,7 +180,7 @@ const getUserConversations = asyncHandler(async (req, res) => {
           conversation_id: conv.id
         },
         order: [['created_at', 'DESC']],
-        attributes: ['id', 'content', 'created_at']
+        attributes: ['id', 'content', 'sender_id', 'created_at']
       });
 
       return {
@@ -205,6 +198,7 @@ const getUserConversations = asyncHandler(async (req, res) => {
           ? {
               id: lastMessage.id,
               content: lastMessage.content,
+              senderId: lastMessage.sender_id,
               createdAt: lastMessage.created_at
             }
           : null,
@@ -312,8 +306,108 @@ const getConversationById = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * POST /api/conversations/:id/messages
+ * Gửi tin nhắn vào conversation
+ */
+const sendMessage = asyncHandler(async (req, res) => {
+  const currentUserId = req.user.id;
+  const conversationId = req.params.id;
+  const { content } = req.body;
+
+  if (!content?.trim()) {
+    return res.status(400).json({
+      success: false,
+      message: 'Nội dung tin nhắn là bắt buộc'
+    });
+  }
+
+  const result = await sequelize.transaction(async (transaction) => {
+    const userParticipant = await ConversationParticipant.findOne({
+      where: {
+        conversation_id: conversationId,
+        user_id: currentUserId
+      },
+      transaction
+    });
+
+    if (!userParticipant) {
+      return {
+        statusCode: 403,
+        body: {
+          success: false,
+          message: 'Bạn không có quyền gửi tin nhắn trong conversation này'
+        }
+      };
+    }
+
+    const conversation = await Conversation.findByPk(conversationId, {
+      transaction
+    });
+
+    if (!conversation) {
+      return {
+        statusCode: 404,
+        body: {
+          success: false,
+          message: 'Conversation không tồn tại'
+        }
+      };
+    }
+
+    const message = await Message.create(
+      {
+        conversation_id: conversationId,
+        sender_id: currentUserId,
+        content: content.trim()
+      },
+      { transaction }
+    );
+
+    await Conversation.update(
+      {
+        updated_at: new Date()
+      },
+      {
+        where: { id: conversationId },
+        transaction
+      }
+    );
+
+    const createdMessage = await Message.findByPk(message.id, {
+      include: [
+        {
+          model: User,
+          as: 'sender',
+          attributes: ['id', 'username', 'full_name']
+        }
+      ],
+      transaction
+    });
+
+    return {
+      statusCode: 201,
+      body: {
+        success: true,
+        message: 'Gửi tin nhắn thành công',
+        data: {
+          id: createdMessage.id,
+          content: createdMessage.content,
+          conversationId: createdMessage.conversation_id,
+          sender: createdMessage.sender,
+          createdAt: createdMessage.created_at,
+          updatedAt: createdMessage.updated_at
+        }
+      }
+    };
+  });
+
+  return res.status(result.statusCode).json(result.body);
+});
+
 module.exports = {
   createPrivateConversation,
   getUserConversations,
-  getConversationById
+  getConversationById,
+  sendMessage
 };

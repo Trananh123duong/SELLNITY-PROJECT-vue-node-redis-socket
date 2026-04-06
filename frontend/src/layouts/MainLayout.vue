@@ -22,6 +22,10 @@ const goRegister = () => {
   router.push('/register')
 }
 
+const goConversations = () => {
+  router.push('/conversations')
+}
+
 const handleLogout = async () => {
   await authStore.logout()
   router.push('/login')
@@ -39,10 +43,11 @@ const handleLogout = async () => {
             Xin chào, {{ username }}
           </span>
 
-          <el-button
-            type="danger"
-            @click="handleLogout"
-          >
+          <el-button type="primary" plain @click="goConversations">
+            Tin nhắn
+          </el-button>
+
+          <el-button type="danger" @click="handleLogout">
             Logout
           </el-button>
         </template>
@@ -52,10 +57,7 @@ const handleLogout = async () => {
             Login
           </el-button>
 
-          <el-button
-            type="primary"
-            @click="goRegister"
-          >
+          <el-button type="primary" @click="goRegister">
             Register
           </el-button>
         </template>
