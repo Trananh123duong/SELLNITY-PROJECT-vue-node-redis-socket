@@ -1,120 +1,92 @@
 <script setup>
-import { createPrivateConversationApi } from '@/api/conversation.api'
-import { getUsersApi, searchUsersApi } from '@/api/user.api'
-import { useAuthStore } from '@/stores/auth.store'
+import { useConversationStore } from '@/stores/conversation.store'
 import { Search, UserFilled } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { storeToRefs } from 'pinia'
+import {
+    computed,
+    onBeforeUnmount,
+    onMounted,
+    ref,
+    watch,
+} from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
-const authStore = useAuthStore()
+const conversationStore = useConversationStore()
+const {
+  candidateUsers: users,
+  candidateUsersLoading: loading,
+  creatingRoom,
+} = storeToRefs(conversationStore)
 
 const keyword = ref('')
-const users = ref([])
-const loading = ref(false)
-const creatingRoom = ref(false)
 const debounceTimer = ref(null)
 const initialLoaded = ref(false)
 
-const currentUserId = computed(() => Number(authStore.user?.id))
 const hasKeyword = computed(() => !!keyword.value.trim())
 
-const mapUsers = (responseData = []) => {
-    return responseData.filter(
-        (user) => Number(user.id) !== currentUserId.value
-    )
-}
-
 const fetchInitialUsers = async () => {
-    loading.value = true
-
-    try {
-        const response = await getUsersApi()
-        users.value = mapUsers(response.data.data || [])
-        initialLoaded.value = true
-    } catch (err) {
-        users.value = []
-        ElMessage.error(
-            err.response?.data?.message || 'Không thể tải danh sách người dùng'
-        )
-    } finally {
-        loading.value = false
-    }
+  try {
+    await conversationStore.fetchInitialUsers()
+    initialLoaded.value = true
+  } catch (err) {
+    ElMessage.error(
+      err.response?.data?.message || 'Không thể tải danh sách người dùng'
+    )
+  }
 }
 
 const fetchUsers = async (searchKeyword) => {
-    if (!searchKeyword.trim()) {
-        await fetchInitialUsers()
-        return
-    }
-
-    loading.value = true
-
-    try {
-        const response = await searchUsersApi(searchKeyword)
-        users.value = mapUsers(response.data.data || [])
-    } catch (err) {
-        users.value = []
-        ElMessage.error(
-            err.response?.data?.message || 'Không thể tìm người dùng'
-        )
-    } finally {
-        loading.value = false
-    }
+  try {
+    await conversationStore.searchUsers(searchKeyword)
+  } catch (err) {
+    ElMessage.error(
+      err.response?.data?.message || 'Không thể tìm người dùng'
+    )
+  }
 }
 
 // Debounce để tránh gọi API liên tục khi người dùng đang gõ
 watch(keyword, (newValue) => {
-    if (debounceTimer.value) {
-        clearTimeout(debounceTimer.value)
-    }
+  if (debounceTimer.value) {
+    clearTimeout(debounceTimer.value)
+  }
 
-    if (!newValue.trim()) {
-        fetchInitialUsers()
-        return
-    }
+  if (!newValue.trim()) {
+    fetchInitialUsers()
+    return
+  }
 
-    debounceTimer.value = setTimeout(async () => {
-        await fetchUsers(newValue)
-    }, 300)
+  debounceTimer.value = setTimeout(async () => {
+    await fetchUsers(newValue)
+  }, 300)
 })
 
 const handleCreateConversation = async (user) => {
-    if (creatingRoom.value) {
-        return
+  try {
+    const conversationId =
+      await conversationStore.createPrivateConversation(user.id)
+
+    if (conversationId) {
+      router.push(`/chat/${conversationId}`)
     }
-
-    creatingRoom.value = true
-
-    try {
-        const response = await createPrivateConversationApi({
-            targetUserId: user.id,
-        })
-
-        const conversationId = response.data.data?.conversationId
-
-        if (conversationId) {
-            router.push(`/chat/${conversationId}`)
-        }
-    } catch (err) {
-        ElMessage.error(
-            err.response?.data?.message ||
-            'Không thể tạo cuộc trò chuyện mới'
-        )
-    } finally {
-        creatingRoom.value = false
-    }
+  } catch (err) {
+    ElMessage.error(
+      err.response?.data?.message ||
+      'Không thể tạo cuộc trò chuyện mới'
+    )
+  }
 }
 
 onBeforeUnmount(() => {
-    if (debounceTimer.value) {
-        clearTimeout(debounceTimer.value)
-    }
+  if (debounceTimer.value) {
+    clearTimeout(debounceTimer.value)
+  }
 })
 
 onMounted(async () => {
-    await fetchInitialUsers()
+  await fetchInitialUsers()
 })
 </script>
 

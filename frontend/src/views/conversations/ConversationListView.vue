@@ -1,53 +1,33 @@
 <script setup>
 import ConversationList from '@/components/conversations/ConversationList.vue'
-import { getConversationsApi } from '@/api/conversation.api'
+import { useConversationStore } from '@/stores/conversation.store'
 import { Plus } from '@element-plus/icons-vue'
-import { onMounted, ref } from 'vue'
+import { storeToRefs } from 'pinia'
+import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
-
-const conversations = ref([])
-const loading = ref(false)
-const error = ref('')
-
-// Lấy danh sách conversation khi vào màn hình
-const fetchConversations = async () => {
-    loading.value = true
-    error.value = ''
-
-    try {
-        const response = await getConversationsApi()
-        const responseData = response.data.data || []
-
-        conversations.value = [...responseData].sort(
-            (a, b) =>
-                new Date(b.updatedAt).getTime() -
-                new Date(a.updatedAt).getTime()
-        )
-    } catch (err) {
-        error.value =
-            err.response?.data?.message ||
-            'Không thể tải danh sách cuộc trò chuyện'
-    } finally {
-        loading.value = false
-    }
-}
+const conversationStore = useConversationStore()
+const {
+  conversations,
+  conversationListLoading: loading,
+  conversationListError: error,
+} = storeToRefs(conversationStore)
 
 const goCreateConversation = () => {
-    router.push('/chat/new')
+  router.push('/chat/new')
 }
 
 const handleSelectConversation = (conversation) => {
-    router.push(`/chat/${conversation.conversationId}`)
+  router.push(`/chat/${conversation.conversationId}`)
 }
 
 const handleRetry = async () => {
-    await fetchConversations()
+  await conversationStore.fetchConversations()
 }
 
 onMounted(async () => {
-    await fetchConversations()
+  await conversationStore.fetchConversations()
 })
 </script>
 
