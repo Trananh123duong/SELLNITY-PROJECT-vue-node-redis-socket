@@ -7,6 +7,11 @@ const {
 } = require('../models');
 const { sequelize } = require('../config/db');
 const { QueryTypes } = require('sequelize');
+const {
+  getCache,
+  setCache,
+  deleteCacheByPrefix
+} = require('../utils/cache');
 
 /**
  * POST /api/conversations/private
@@ -128,6 +133,9 @@ const createPrivateConversation = asyncHandler(async (req, res) => {
     };
   });
 
+  deleteCacheByPrefix(`conversations:list:${currentUserId}`);
+  deleteCacheByPrefix(`conversations:list:${targetUserId}`);
+
   return res.status(200).json({
     success: true,
     message: 'Tạo hoặc lấy conversation thành công',
@@ -141,6 +149,12 @@ const createPrivateConversation = asyncHandler(async (req, res) => {
  */
 const getUserConversations = asyncHandler(async (req, res) => {
   const currentUserId = req.user.id;
+  const listCacheKey = `conversations:list:${currentUserId}`;
+  const cachedConversations = getCache(listCacheKey);
+
+  if (cachedConversations) {
+    return res.status(200).json(cachedConversations);
+  }
 
   const userConversations = await ConversationParticipant.findAll({
     where: {
@@ -208,11 +222,15 @@ const getUserConversations = asyncHandler(async (req, res) => {
     })
   );
 
-  return res.status(200).json({
+  const response = {
     success: true,
     message: 'Lấy danh sách conversation thành công',
     data: conversations
-  });
+  };
+
+  setCache(listCacheKey, response, 10);
+
+  return res.status(200).json(response);
 });
 
 /**
@@ -226,6 +244,12 @@ const getConversationById = asyncHandler(async (req, res) => {
   const page = Number(req.query.page || 1);
   const limit = Number(req.query.limit || 20);
   const offset = (page - 1) * limit;
+  const detailCacheKey = `conversations:detail:${conversationId}:${currentUserId}:page:${page}:limit:${limit}`;
+  const cachedConversation = getCache(detailCacheKey);
+
+  if (cachedConversation) {
+    return res.status(200).json(cachedConversation);
+  }
 
   const userParticipant = await ConversationParticipant.findOne({
     where: {
@@ -280,7 +304,7 @@ const getConversationById = asyncHandler(async (req, res) => {
     offset
   });
 
-  return res.status(200).json({
+  const response = {
     success: true,
     message: 'Lấy chi tiết conversation thành công',
     data: {
@@ -303,7 +327,11 @@ const getConversationById = asyncHandler(async (req, res) => {
         hasMore: messages.length === limit
       }
     }
-  });
+  };
+
+  setCache(detailCacheKey, response, page === 1 ? 5 : 180);
+
+  return res.status(200).json(response);
 });
 
 /**
@@ -385,8 +413,19 @@ const sendMessage = asyncHandler(async (req, res) => {
       transaction
     });
 
+    const participants = await ConversationParticipant.findAll({
+      where: {
+        conversation_id: conversationId
+      },
+      attributes: ['user_id'],
+      transaction
+    });
+
+    const participantIds = participants.map((p) => p.user_id);
+
     return {
       statusCode: 201,
+      participantIds,
       body: {
         success: true,
         message: 'Gửi tin nhắn thành công',
@@ -401,6 +440,14 @@ const sendMessage = asyncHandler(async (req, res) => {
       }
     };
   });
+
+  if (result.statusCode === 201) {
+    for (const participantId of result.participantIds || []) {
+      deleteCacheByPrefix(`conversations:list:${participantId}`);
+    }
+
+    deleteCacheByPrefix(`conversations:detail:${conversationId}:`);
+  }
 
   return res.status(result.statusCode).json(result.body);
 });

@@ -2,6 +2,12 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const asyncHandler = require('express-async-handler');
 const { users: User } = require('../models');
+const {
+  getCache,
+  setCache,
+  deleteCache,
+  deleteCacheByPrefix
+} = require('../utils/cache');
 
 const register = asyncHandler(async (req, res) => {
   const { username, email, full_name, password, phone } = req.body;
@@ -29,6 +35,8 @@ const register = asyncHandler(async (req, res) => {
     password: hashedPassword,
     phone
   });
+
+  deleteCacheByPrefix('users:list:');
 
   return res.status(201).json({
     message: 'Đăng ký thành công',
@@ -93,6 +101,13 @@ const login = asyncHandler(async (req, res) => {
 });
 
 const getMyProfile = asyncHandler(async (req, res) => {
+  const cacheKey = `auth:profile:${req.user.id}`;
+  const cachedProfile = getCache(cacheKey);
+
+  if (cachedProfile) {
+    return res.status(200).json(cachedProfile);
+  }
+
   const user = await User.findByPk(req.user.id, {
     attributes: {
       exclude: ['password', 'refresh_token']
@@ -104,6 +119,8 @@ const getMyProfile = asyncHandler(async (req, res) => {
       message: 'Không tìm thấy user'
     });
   }
+
+  setCache(cacheKey, user, 60);
 
   return res.status(200).json(user);
 });
@@ -172,6 +189,8 @@ const changePassword = asyncHandler(async (req, res) => {
     refresh_token: null
   });
 
+  deleteCache(`auth:profile:${req.user.id}`);
+
   return res.status(200).json({
     message: 'Đổi mật khẩu thành công, vui lòng đăng nhập lại'
   });
@@ -189,6 +208,8 @@ const logout = asyncHandler(async (req, res) => {
   await user.update({
     refresh_token: null
   });
+
+  deleteCache(`auth:profile:${req.user.id}`);
 
   return res.status(200).json({
     message: 'Đăng xuất thành công'
