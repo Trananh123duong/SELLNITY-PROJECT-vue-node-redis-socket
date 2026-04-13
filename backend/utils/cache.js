@@ -1,52 +1,76 @@
-const cacheStore = new Map();
+const { redisClient } = require('../config/redis');
 
 const DEFAULT_TTL_SECONDS = 60;
 
-const now = () => Date.now();
-
-const isExpired = (entry) => !entry || entry.expiresAt <= now();
-
-const getCache = (key) => {
-  const entry = cacheStore.get(key);
-
-  if (!entry || isExpired(entry)) {
-    cacheStore.delete(key);
+/**
+ * Lấy giá trị từ Redis cache.
+ * Trả về null nếu key không tồn tại hoặc Redis lỗi.
+ */
+const getCache = async (key) => {
+  try {
+    const raw = await redisClient.get(key);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (err) {
+    console.error(`[Cache] getCache error (key=${key}):`, err.message);
     return null;
   }
-
-  return entry.value;
 };
 
-const setCache = (key, value, ttlSeconds = DEFAULT_TTL_SECONDS) => {
+/**
+ * Lưu giá trị vào Redis với TTL (giây).
+ */
+const setCache = async (key, value, ttlSeconds = DEFAULT_TTL_SECONDS) => {
   const safeTtl = Number(ttlSeconds) > 0 ? Number(ttlSeconds) : DEFAULT_TTL_SECONDS;
-
-  cacheStore.set(key, {
-    value,
-    expiresAt: now() + safeTtl * 1000
-  });
-
-  return value;
-};
-
-const deleteCache = (key) => {
-  cacheStore.delete(key);
-};
-
-const deleteCacheByPrefix = (prefix) => {
-  for (const key of cacheStore.keys()) {
-    if (key.startsWith(prefix)) {
-      cacheStore.delete(key);
-    }
+  try {
+    await redisClient.set(key, JSON.stringify(value), 'EX', safeTtl);
+    return value;
+  } catch (err) {
+    console.error(`[Cache] setCache error (key=${key}):`, err.message);
+    return value;
   }
 };
 
-setInterval(() => {
-  for (const [key, entry] of cacheStore.entries()) {
-    if (isExpired(entry)) {
-      cacheStore.delete(key);
-    }
+/**
+ * Xóa một key khỏi cache.
+ */
+const deleteCache = async (key) => {
+  try {
+    await redisClient.del(key);
+  } catch (err) {
+    console.error(`[Cache] deleteCache error (key=${key}):`, err.message);
   }
-}, 60 * 1000).unref();
+};
+
+/**
+ * Xóa tất cả keys có prefix cho trước.
+ * Dùng SCAN thay KEYS để tránh block Redis trên production.
+ */
+const deleteCacheByPrefix = async (prefix) => {
+  try {
+    const pattern = `${prefix}*`;
+    let cursor = '0';
+    const keysToDelete = [];
+
+    do {
+      const [nextCursor, keys] = await redisClient.scan(
+        cursor,
+        'MATCH',
+        pattern,
+        'COUNT',
+        100
+      );
+      cursor = nextCursor;
+      keysToDelete.push(...keys);
+    } while (cursor !== '0');
+
+    if (keysToDelete.length > 0) {
+      await redisClient.del(...keysToDelete);
+    }
+  } catch (err) {
+    console.error(`[Cache] deleteCacheByPrefix error (prefix=${prefix}):`, err.message);
+  }
+};
 
 module.exports = {
   getCache,

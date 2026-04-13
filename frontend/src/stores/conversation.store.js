@@ -9,6 +9,12 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
 import { useAuthStore } from '@/stores/auth.store'
+import {
+    getSocket,
+    joinConversation,
+    leaveConversation,
+    onNewMessage,
+} from '@/services/socket'
 
 const normalizeMessages = (messageItems = []) => {
   return messageItems.map((message) => ({
@@ -40,6 +46,9 @@ export const useConversationStore = defineStore('conversation', () => {
   const candidateUsers = ref([])
   const candidateUsersLoading = ref(false)
   const creatingRoom = ref(false)
+
+  // Lưu hàm cleanup listener new-message để gỡ khi rời room
+  let removeNewMessageListener = null
 
   const currentUserId = computed(() => Number(authStore.user?.id))
 
@@ -104,6 +113,30 @@ export const useConversationStore = defineStore('conversation', () => {
         messages.value = [...sortedMessages, ...messages.value]
       } else {
         messages.value = sortedMessages
+
+        // Tham gia socket room và đăng ký lắng nghe tin nhắn mới
+        joinConversation(conversationId)
+
+        if (removeNewMessageListener) {
+          removeNewMessageListener()
+        }
+
+        removeNewMessageListener = onNewMessage((newMessage) => {
+          const normalized = normalizeMessages([newMessage])[0]
+          const alreadyExists = messages.value.some(
+            (m) => m.id === normalized.id
+          )
+          if (!alreadyExists) {
+            messages.value = [...messages.value, normalized]
+
+            if (currentConversation.value) {
+              currentConversation.value = {
+                ...currentConversation.value,
+                updatedAt: normalized.createdAt,
+              }
+            }
+          }
+        })
       }
     } catch (err) {
       conversationError.value =
@@ -145,12 +178,17 @@ export const useConversationStore = defineStore('conversation', () => {
         response.data.data,
       ])[0]
 
-      messages.value = [...messages.value, newMessage]
+      // Chỉ tự append khi socket không connected (fallback)
+      // Bình thường socket event "new-message" sẽ append cho cả 2 phía
+      const socket = getSocket()
+      if (!socket?.connected) {
+        messages.value = [...messages.value, newMessage]
 
-      if (currentConversation.value) {
-        currentConversation.value = {
-          ...currentConversation.value,
-          updatedAt: newMessage.createdAt,
+        if (currentConversation.value) {
+          currentConversation.value = {
+            ...currentConversation.value,
+            updatedAt: newMessage.createdAt,
+          }
         }
       }
 
@@ -212,6 +250,15 @@ export const useConversationStore = defineStore('conversation', () => {
   }
 
   const clearConversationDetail = () => {
+    if (currentConversation.value?.id) {
+      leaveConversation(currentConversation.value.id)
+    }
+
+    if (removeNewMessageListener) {
+      removeNewMessageListener()
+      removeNewMessageListener = null
+    }
+
     currentConversation.value = null
     participants.value = []
     messages.value = []

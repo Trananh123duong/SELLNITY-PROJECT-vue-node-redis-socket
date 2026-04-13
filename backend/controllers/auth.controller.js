@@ -36,7 +36,7 @@ const register = asyncHandler(async (req, res) => {
     phone
   });
 
-  deleteCacheByPrefix('users:list:');
+  await deleteCacheByPrefix('users:list:');
 
   return res.status(201).json({
     message: 'Đăng ký thành công',
@@ -102,7 +102,7 @@ const login = asyncHandler(async (req, res) => {
 
 const getMyProfile = asyncHandler(async (req, res) => {
   const cacheKey = `auth:profile:${req.user.id}`;
-  const cachedProfile = getCache(cacheKey);
+  const cachedProfile = await getCache(cacheKey);
 
   if (cachedProfile) {
     return res.status(200).json(cachedProfile);
@@ -120,7 +120,7 @@ const getMyProfile = asyncHandler(async (req, res) => {
     });
   }
 
-  setCache(cacheKey, user, 60);
+  await setCache(cacheKey, user, 60);
 
   return res.status(200).json(user);
 });
@@ -189,7 +189,7 @@ const changePassword = asyncHandler(async (req, res) => {
     refresh_token: null
   });
 
-  deleteCache(`auth:profile:${req.user.id}`);
+  await deleteCache(`auth:profile:${req.user.id}`);
 
   return res.status(200).json({
     message: 'Đổi mật khẩu thành công, vui lòng đăng nhập lại'
@@ -209,7 +209,7 @@ const logout = asyncHandler(async (req, res) => {
     refresh_token: null
   });
 
-  deleteCache(`auth:profile:${req.user.id}`);
+  await deleteCache(`auth:profile:${req.user.id}`);
 
   return res.status(200).json({
     message: 'Đăng xuất thành công'

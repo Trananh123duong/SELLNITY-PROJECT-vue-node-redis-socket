@@ -12,6 +12,7 @@ const {
   setCache,
   deleteCacheByPrefix
 } = require('../utils/cache');
+const { getIO } = require('../socket');
 
 /**
  * POST /api/conversations/private
@@ -133,8 +134,8 @@ const createPrivateConversation = asyncHandler(async (req, res) => {
     };
   });
 
-  deleteCacheByPrefix(`conversations:list:${currentUserId}`);
-  deleteCacheByPrefix(`conversations:list:${targetUserId}`);
+  await deleteCacheByPrefix(`conversations:list:${currentUserId}`);
+  await deleteCacheByPrefix(`conversations:list:${targetUserId}`);
 
   return res.status(200).json({
     success: true,
@@ -150,7 +151,7 @@ const createPrivateConversation = asyncHandler(async (req, res) => {
 const getUserConversations = asyncHandler(async (req, res) => {
   const currentUserId = req.user.id;
   const listCacheKey = `conversations:list:${currentUserId}`;
-  const cachedConversations = getCache(listCacheKey);
+  const cachedConversations = await getCache(listCacheKey);
 
   if (cachedConversations) {
     return res.status(200).json(cachedConversations);
@@ -228,7 +229,7 @@ const getUserConversations = asyncHandler(async (req, res) => {
     data: conversations
   };
 
-  setCache(listCacheKey, response, 10);
+  await setCache(listCacheKey, response, 10);
 
   return res.status(200).json(response);
 });
@@ -245,7 +246,7 @@ const getConversationById = asyncHandler(async (req, res) => {
   const limit = Number(req.query.limit || 20);
   const offset = (page - 1) * limit;
   const detailCacheKey = `conversations:detail:${conversationId}:${currentUserId}:page:${page}:limit:${limit}`;
-  const cachedConversation = getCache(detailCacheKey);
+  const cachedConversation = await getCache(detailCacheKey);
 
   if (cachedConversation) {
     return res.status(200).json(cachedConversation);
@@ -329,7 +330,7 @@ const getConversationById = asyncHandler(async (req, res) => {
     }
   };
 
-  setCache(detailCacheKey, response, page === 1 ? 5 : 180);
+  await setCache(detailCacheKey, response, page === 1 ? 5 : 180);
 
   return res.status(200).json(response);
 });
@@ -443,10 +444,18 @@ const sendMessage = asyncHandler(async (req, res) => {
 
   if (result.statusCode === 201) {
     for (const participantId of result.participantIds || []) {
-      deleteCacheByPrefix(`conversations:list:${participantId}`);
+      await deleteCacheByPrefix(`conversations:list:${participantId}`);
     }
 
-    deleteCacheByPrefix(`conversations:detail:${conversationId}:`);
+    await deleteCacheByPrefix(`conversations:detail:${conversationId}:`);
+
+    // Emit real-time event tới tất cả client trong room
+    try {
+      const io = getIO();
+      io.to(`conversation:${conversationId}`).emit('new-message', result.body.data);
+    } catch (err) {
+      console.error('[Socket.IO] Không thể emit new-message:', err.message);
+    }
   }
 
   return res.status(result.statusCode).json(result.body);

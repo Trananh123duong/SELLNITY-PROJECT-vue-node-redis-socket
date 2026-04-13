@@ -109,6 +109,16 @@ watch(
   }
 )
 
+// Auto-scroll khi có tin nhắn mới, chỉ khi user đang ở gần cuối
+watch(
+  () => messages.value.length,
+  async () => {
+    if (messageListRef.value?.isNearBottom()) {
+      await scrollToBottom()
+    }
+  }
+)
+
 onUnmounted(() => {
   conversationStore.clearConversationDetail()
 })

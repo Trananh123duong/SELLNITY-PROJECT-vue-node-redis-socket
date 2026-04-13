@@ -13,7 +13,7 @@ const getUsers = asyncHandler(async (req, res) => {
   const { search } = req.query;
   const normalizedSearch = search?.trim().toLowerCase() || '';
   const listCacheKey = `users:list:${normalizedSearch}`;
-  const cachedUsers = getCache(listCacheKey);
+  const cachedUsers = await getCache(listCacheKey);
 
   if (cachedUsers) {
     return res.status(200).json(cachedUsers);
@@ -49,7 +49,7 @@ const getUsers = asyncHandler(async (req, res) => {
     data: users
   };
 
-  setCache(listCacheKey, response, 120);
+  await setCache(listCacheKey, response, 120);
 
   return res.status(200).json(response);
 });
@@ -58,7 +58,7 @@ const getUsers = asyncHandler(async (req, res) => {
 const getUserById = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const detailCacheKey = `users:detail:${id}`;
-  const cachedUser = getCache(detailCacheKey);
+  const cachedUser = await getCache(detailCacheKey);
 
   if (cachedUser) {
     return res.status(200).json(cachedUser);
@@ -78,7 +78,7 @@ const getUserById = asyncHandler(async (req, res) => {
     data: user
   };
 
-  setCache(detailCacheKey, response, 300);
+  await setCache(detailCacheKey, response, 300);
 
   return res.status(200).json(response);
 });
@@ -87,7 +87,7 @@ const getUserById = asyncHandler(async (req, res) => {
 const createUser = asyncHandler(async (req, res) => {
   const user = await User.create(req.body);
 
-  deleteCacheByPrefix('users:list:');
+  await deleteCacheByPrefix('users:list:');
 
   res.status(201).json({
     success: true,
@@ -111,8 +111,8 @@ const updateUser = asyncHandler(async (req, res) => {
 
   await user.update(req.body);
 
-  deleteCacheByPrefix('users:list:');
-  deleteCache(`users:detail:${id}`);
+  await deleteCacheByPrefix('users:list:');
+  await deleteCache(`users:detail:${id}`);
 
   res.status(200).json({
     success: true,
@@ -136,8 +136,8 @@ const deleteUser = asyncHandler(async (req, res) => {
 
   await user.destroy();
 
-  deleteCacheByPrefix('users:list:');
-  deleteCache(`users:detail:${id}`);
+  await deleteCacheByPrefix('users:list:');
+  await deleteCache(`users:detail:${id}`);
 
   res.status(200).json({
     success: true,

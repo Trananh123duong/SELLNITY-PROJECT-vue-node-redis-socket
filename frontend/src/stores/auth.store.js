@@ -8,6 +8,7 @@ import {
 } from '@/api/auth.api'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
+import { connectSocket, disconnectSocket } from '@/services/socket'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref(null)
@@ -53,6 +54,8 @@ export const useAuthStore = defineStore('auth', () => {
         'refreshToken',
         response.data.refreshToken
       )
+
+      connectSocket()
 
       return response.data
     } catch (err) {
@@ -129,6 +132,8 @@ export const useAuthStore = defineStore('auth', () => {
 
       localStorage.removeItem('accessToken')
       localStorage.removeItem('refreshToken')
+
+      disconnectSocket()
 
       loading.value = false
     }

@@ -64,10 +64,18 @@ const setScrollTop = (value) => {
     messageContainerRef.value.scrollTop = value
 }
 
+// Kiểm tra user có đang ở gần cuối không (trong khoảng 100px)
+const isNearBottom = () => {
+    if (!messageContainerRef.value) return true
+    const { scrollTop, scrollHeight, clientHeight } = messageContainerRef.value
+    return scrollHeight - scrollTop - clientHeight <= 100
+}
+
 defineExpose({
     scrollToBottom,
     getScrollHeight,
     setScrollTop,
+    isNearBottom,
 })
 </script>
 

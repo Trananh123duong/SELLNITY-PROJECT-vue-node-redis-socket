@@ -10,7 +10,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres123
     ports:
-      - "5432:5432"
+      - "15432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
@@ -28,6 +28,32 @@ services:
     volumes:
       - pgadmin_data:/var/lib/pgadmin
 
+  redis:
+    image: redis:7-alpine
+    container_name: redis_cache
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: >
+      redis-server 
+      --appendonly yes 
+      --notify-keyspace-events KEA
+
+  redisinsight:
+    image: redis/redisinsight:latest
+    container_name: redisinsight_web
+    restart: always
+    ports:
+      - "5540:5540"
+    depends_on:
+      - redis
+    volumes:
+      - redisinsight_data:/data
+
 volumes:
   postgres_data:
   pgadmin_data:
+  redis_data:
+  redisinsight_data:
